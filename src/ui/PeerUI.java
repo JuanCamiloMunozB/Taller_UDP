@@ -1,5 +1,8 @@
 package ui;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -11,7 +14,10 @@ import util.UDPConnection;
 public class PeerUI extends Application {
 
     private TextArea messageArea;
+    private Label ipSrcLabel, ipDestLabel;
+    private Label portSrcLabel, portDestLabel;
     private UDPConnection connection;
+    private Thread listeningThread;
 
     public static void main(String[] args) {
         launch(args);
@@ -33,10 +39,16 @@ public class PeerUI extends Application {
 
         Button sendButton = new Button("Send Message");
         Button receiveButton = new Button("Start Receiving");
+        Button stopButton = new Button("Stop Listening");
 
         messageArea = new TextArea();
         messageArea.setEditable(false);
         messageArea.setPrefHeight(200);
+
+        ipSrcLabel = new Label("Source IP: Not Set");
+        ipDestLabel = new Label("Destination IP: Not Set");
+        portSrcLabel = new Label("Source Port: Not Set");
+        portDestLabel = new Label("Destination Port: Not Set");
 
         // UDP Connection
         connection = UDPConnection.getInstance();
@@ -48,6 +60,11 @@ public class PeerUI extends Application {
             String ip = ipField.getText();
             int port = Integer.parseInt(portField.getText());
             connection.sendDatagram(message, ip, port);
+
+            // Update destination IP and port labels
+            ipDestLabel.setText("Destination IP: " + ip);
+            portDestLabel.setText("Destination Port: " + port);
+
             messageField.clear();
         });
 
@@ -55,17 +72,36 @@ public class PeerUI extends Application {
         receiveButton.setOnAction(e -> {
             int port = Integer.parseInt(portField.getText());
             connection.setPort(port);
-            connection.start();
+            listeningThread = new Thread(connection);
+            listeningThread.start();
+
+            // Update source port label
+            portSrcLabel.setText("Source Port: " + port);
+            ipSrcLabel.setText("Source IP: " + getLocalIPAddress());
+
             messageArea.appendText("Started listening on port: " + port + "\n");
+        });
+
+        // Action for stop button
+        stopButton.setOnAction(e -> {
+            if (connection != null) {
+                connection.stopListening();
+            }
+            if (listeningThread != null && listeningThread.isAlive()) {
+                listeningThread.interrupt();
+            }
+            messageArea.appendText("Stopped listening.\n");
         });
 
         // Layout
         VBox layout = new VBox(10);
         layout.setPadding(new Insets(20));
         layout.getChildren().addAll(new Label("Message:"), messageField, new Label("IP Address:"), ipField,
-                new Label("Port:"), portField, sendButton, receiveButton, messageArea);
+                new Label("Port:"), portField, sendButton, receiveButton, stopButton,
+                ipSrcLabel, portSrcLabel, ipDestLabel, portDestLabel,
+                messageArea);
 
-        Scene scene = new Scene(layout, 400, 400);
+        Scene scene = new Scene(layout, 400, 500);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -73,5 +109,16 @@ public class PeerUI extends Application {
     // Method to update the message area
     public void updateMessageArea(String message) {
         messageArea.appendText(message + "\n");
+    }
+
+    // Helper method to get the local IP address
+    private String getLocalIPAddress() {
+        try {
+            InetAddress localHost = InetAddress.getLocalHost();
+            return localHost.getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            return "Unknown";
+        }
     }
 }

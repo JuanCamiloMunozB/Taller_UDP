@@ -9,8 +9,10 @@ import java.net.*;
 public class UDPConnection extends Thread {
 
     private DatagramSocket socket;
-    private static UDPConnection instance;
     private PeerUI peerUI;
+    private volatile boolean running = true;
+
+    private static UDPConnection instance;
 
     private UDPConnection() {
     }
@@ -29,8 +31,9 @@ public class UDPConnection extends Thread {
     public void setPort(int port) {
         try {
             this.socket = new DatagramSocket(port);
+            System.out.println("Socket opened on port: " + port); // Debugging line
         } catch (SocketException e) {
-            e.printStackTrace();
+            System.out.println("Error opening socket: " + e.getMessage());
         }
     }
 
@@ -38,23 +41,25 @@ public class UDPConnection extends Thread {
     public void run() {
         try {
             DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
-            while (true) {
+            while (running) {
                 System.out.println("Waiting for message...");
                 this.socket.receive(packet);
 
-                // Decodificar mensaje
                 String message = new String(packet.getData(), 0, packet.getLength()).trim();
                 System.out.println("Received: " + message);
 
-                // Actualizar UI con el mensaje recibido
                 if (peerUI != null) {
                     Platform.runLater(() -> peerUI.updateMessageArea("Received: " + message));
                 }
             }
         } catch (SocketException e) {
-            e.printStackTrace();
+            if (running) {
+                e.printStackTrace();
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            if (running) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -63,8 +68,16 @@ public class UDPConnection extends Thread {
             InetAddress ipAddress = InetAddress.getByName(ipDest);
             DatagramPacket packet = new DatagramPacket(message.getBytes(), message.length(), ipAddress, portDest);
             socket.send(packet);
+            System.out.println("Sent message: '" + message + "' to " + ipDest + ":" + portDest); // Debugging line
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error sending message: " + e.getMessage());
+        }
+    }
+
+    public void stopListening() {
+        running = false;
+        if (socket != null && !socket.isClosed()) {
+            socket.close();
         }
     }
 }
