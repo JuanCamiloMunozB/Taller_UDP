@@ -31,7 +31,7 @@ public class PeerUI extends Application {
         TextField messageField = new TextField();
         messageField.setPromptText("Enter message to send");
 
-        TextField ipField = new TextField("127.0.0.1");
+        TextField ipField = new TextField();
         ipField.setPromptText("Enter IP Address");
 
         TextField portField = new TextField();
@@ -60,11 +60,8 @@ public class PeerUI extends Application {
             String ip = ipField.getText();
             int port = Integer.parseInt(portField.getText());
             connection.sendDatagram(message, ip, port);
-
-            // Update destination IP and port labels
             ipDestLabel.setText("Destination IP: " + ip);
             portDestLabel.setText("Destination Port: " + port);
-
             messageField.clear();
         });
 

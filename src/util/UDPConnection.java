@@ -24,6 +24,10 @@ public class UDPConnection extends Thread {
         return instance;
     }
 
+    public DatagramSocket getSocket() {
+        return socket;
+    }
+
     public void setPeerUI(PeerUI peerUI) {
         this.peerUI = peerUI;
     }
@@ -40,12 +44,12 @@ public class UDPConnection extends Thread {
     @Override
     public void run() {
         try {
-            DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
             while (running) {
+                DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
                 System.out.println("Waiting for message...");
                 this.socket.receive(packet);
 
-                String message = new String(packet.getData(), 0, packet.getLength()).trim();
+                String message = new String(packet.getData()).trim();
                 System.out.println("Received: " + message);
 
                 if (peerUI != null) {
